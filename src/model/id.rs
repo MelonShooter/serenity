@@ -316,18 +316,14 @@ mod tests {
         use super::snowflake;
 
         let id = GuildId(17_5928_8472_9911_7063);
-        assert_tokens(&id, &[
-            Token::NewtypeStruct {
-                name: "GuildId",
-            },
-            Token::Str("175928847299117063"),
-        ]);
-        assert_de_tokens(&id, &[
-            Token::NewtypeStruct {
-                name: "GuildId",
-            },
-            Token::U64(17_5928_8472_9911_7063),
-        ]);
+        assert_tokens(
+            &id,
+            &[Token::NewtypeStruct { name: "GuildId" }, Token::Str("175928847299117063")],
+        );
+        assert_de_tokens(
+            &id,
+            &[Token::NewtypeStruct { name: "GuildId" }, Token::U64(17_5928_8472_9911_7063)],
+        );
 
         #[derive(Debug, PartialEq, Deserialize, Serialize)]
         struct S {
@@ -335,39 +331,33 @@ mod tests {
             id: u64,
         }
 
-        let s = S {
-            id: 17_5928_8472_9911_7063,
-        };
-        assert_tokens(&s, &[
-            Token::Struct {
-                name: "S",
-                len: 1,
-            },
-            Token::Str("id"),
-            Token::Str("175928847299117063"),
-            Token::StructEnd,
-        ]);
+        let s = S { id: 17_5928_8472_9911_7063 };
+        assert_tokens(
+            &s,
+            &[
+                Token::Struct { name: "S", len: 1 },
+                Token::Str("id"),
+                Token::Str("175928847299117063"),
+                Token::StructEnd,
+            ],
+        );
 
         #[derive(Debug, PartialEq, Deserialize, Serialize)]
         struct Opt {
             id: Option<GuildId>,
         }
 
-        let s = Opt {
-            id: Some(GuildId(17_5928_8472_9911_7063)),
-        };
-        assert_tokens(&s, &[
-            Token::Struct {
-                name: "Opt",
-                len: 1,
-            },
-            Token::Str("id"),
-            Token::Some,
-            Token::NewtypeStruct {
-                name: "GuildId",
-            },
-            Token::Str("175928847299117063"),
-            Token::StructEnd,
-        ]);
+        let s = Opt { id: Some(GuildId(17_5928_8472_9911_7063)) };
+        assert_tokens(
+            &s,
+            &[
+                Token::Struct { name: "Opt", len: 1 },
+                Token::Str("id"),
+                Token::Some,
+                Token::NewtypeStruct { name: "GuildId" },
+                Token::Str("175928847299117063"),
+                Token::StructEnd,
+            ],
+        );
     }
 }

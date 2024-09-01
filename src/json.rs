@@ -168,27 +168,13 @@ pub(crate) fn from_number(n: impl ToNumber) -> Value {
 pub mod prelude {
     #[cfg(not(feature = "simd-json"))]
     pub use serde_json::{
-        from_reader,
-        from_slice,
-        from_str,
-        from_value,
-        to_string,
-        to_string_pretty,
-        to_value,
-        to_vec,
-        to_vec_pretty,
+        from_reader, from_slice, from_str, from_value, to_string, to_string_pretty, to_value,
+        to_vec, to_vec_pretty,
     };
     #[cfg(feature = "simd-json")]
     pub use simd_json::{
-        from_reader,
-        from_slice,
-        from_str,
-        serde::from_owned_value as from_value,
-        serde::to_owned_value as to_value,
-        to_string,
-        to_string_pretty,
-        to_vec,
-        to_vec_pretty,
+        from_reader, from_slice, from_str, serde::from_owned_value as from_value,
+        serde::to_owned_value as to_value, to_string, to_string_pretty, to_vec, to_vec_pretty,
     };
     #[cfg(feature = "simd-json")]
     pub use simd_json::{Builder, Mutable, Value as ValueTrait, ValueAccess};

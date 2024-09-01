@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
+use std::time::Instant;
 
 use serde::de::{Error as DeError, IgnoredAny, MapAccess};
 
@@ -218,13 +219,7 @@ impl<'de> Deserialize<'de> for GuildMembersChunkEvent {
                     })
                     .collect();
 
-                Ok(GuildMembersChunkEvent {
-                    guild_id,
-                    chunk_index,
-                    chunk_count,
-                    members,
-                    nonce,
-                })
+                Ok(GuildMembersChunkEvent { guild_id, chunk_index, chunk_count, members, nonce })
             }
         }
 
@@ -241,9 +236,7 @@ pub struct GuildRoleCreateEvent {
 
 impl<'de> Deserialize<'de> for GuildRoleCreateEvent {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> StdResult<Self, D::Error> {
-        Ok(Self {
-            role: roles::deserialize_event(deserializer)?,
-        })
+        Ok(Self { role: roles::deserialize_event(deserializer)? })
     }
 }
 
@@ -262,9 +255,7 @@ pub struct GuildRoleUpdateEvent {
 
 impl<'de> Deserialize<'de> for GuildRoleUpdateEvent {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> StdResult<Self, D::Error> {
-        Ok(Self {
-            role: roles::deserialize_event(deserializer)?,
-        })
+        Ok(Self { role: roles::deserialize_event(deserializer)? })
     }
 }
 
@@ -590,8 +581,11 @@ pub enum GatewayEvent {
 
 impl<'de> Deserialize<'de> for GatewayEvent {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> StdResult<Self, D::Error> {
+        let instant = Instant::now();
+        // could we avoid the intermediate map deserialization
         let mut map = JsonMap::deserialize(deserializer)?;
 
+        println!("afte rmap deserialize: {}ms", instant.elapsed().as_millis());
         let op = map
             .remove("op")
             .ok_or_else(|| DeError::custom("expected op"))
@@ -610,12 +604,18 @@ impl<'de> Deserialize<'de> for GatewayEvent {
                     .ok_or_else(|| DeError::custom("expected gateway event type"))
                     .and_then(EventType::deserialize)
                     .map_err(DeError::custom)?;
+
+                println!("before payload: time elapsed: {}ms", instant.elapsed().as_millis());
+
                 let payload = map
                     .remove("d")
                     .ok_or_else(|| Error::Decode("expected gateway event d", Value::from(map)))
                     .map_err(DeError::custom)?;
 
+                println!("time elapsed: {}ms", instant.elapsed().as_millis());
+
                 let x = match deserialize_event_with_type(kind.clone(), payload) {
+                    // Deserializing the event costs 1.595 billion instructions
                     Ok(x) => x,
                     Err(why) => {
                         return Err(DeError::custom(format_args!("event {:?}: {}", kind, why)));
@@ -1355,25 +1355,31 @@ pub fn deserialize_event_with_type(kind: EventType, v: Value) -> Result<Event> {
             // GuildUnavailable isn't actually received from the gateway, so it
             // can be lumped in with GuildCreate's arm.
 
-            let mut map = JsonMap::deserialize(v)?;
+            println!(
+                "This is the start of the deserialization of the JSON map (not including deserialization of the JSON payload to a map) into Event::GuildCreate."
+            );
 
-            if map.remove("unavailable").and_then(|v| v.as_bool()).unwrap_or(false) {
-                let guild_data = from_value(Value::from(map))?;
+            let time = Instant::now();
 
-                Event::GuildUnavailable(guild_data)
+            if v.get("unavailable").and_then(|v| v.as_bool()).unwrap_or(false) {
+                Event::GuildUnavailable(from_value(v)?)
             } else {
-                Event::GuildCreate(from_value(Value::from(map))?)
+                // fails here
+                let event = Event::GuildCreate(from_value(v)?);
+
+                println!(
+                    "This is the end of the deserialization of the JSON map into Event::GuildCreate. Time elapsed: {}ms.",
+                    time.elapsed().as_millis()
+                );
+
+                event
             }
         },
         EventType::GuildDelete => {
-            let mut map = JsonMap::deserialize(v)?;
-
-            if map.remove("unavailable").and_then(|v| v.as_bool()).unwrap_or(false) {
-                let guild_data = from_value(Value::from(map))?;
-
-                Event::GuildUnavailable(guild_data)
+            if v.get("unavailable").and_then(|v| v.as_bool()).unwrap_or(false) {
+                Event::GuildUnavailable(from_value(v)?)
             } else {
-                Event::GuildDelete(from_value(Value::from(map))?)
+                Event::GuildDelete(from_value(v)?)
             }
         },
         EventType::GuildEmojisUpdate => Event::GuildEmojisUpdate(from_value(v)?),
@@ -1418,10 +1424,7 @@ pub fn deserialize_event_with_type(kind: EventType, v: Value) -> Result<Event> {
         EventType::ThreadListSync => Event::ThreadListSync(from_value(v)?),
         EventType::ThreadMemberUpdate => Event::ThreadMemberUpdate(from_value(v)?),
         EventType::ThreadMembersUpdate => Event::ThreadMembersUpdate(from_value(v)?),
-        EventType::Other(kind) => Event::Unknown(UnknownEvent {
-            kind,
-            value: v,
-        }),
+        EventType::Other(kind) => Event::Unknown(UnknownEvent { kind, value: v }),
     })
 }
 

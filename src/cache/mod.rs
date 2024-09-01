@@ -219,10 +219,7 @@ impl Cache {
     /// ```
     #[instrument]
     pub fn new_with_settings(settings: Settings) -> Self {
-        Self {
-            settings: RwLock::new(settings),
-            ..Default::default()
-        }
+        Self { settings: RwLock::new(settings), ..Default::default() }
     }
 
     /// Fetches the number of [`Member`]s that have not had data received.
@@ -1142,9 +1139,7 @@ mod test {
 
         // Add a channel delete event to the cache, the cached messages for that
         // channel should now be gone.
-        let mut delete = ChannelDeleteEvent {
-            channel: channel.clone(),
-        };
+        let mut delete = ChannelDeleteEvent { channel: channel.clone() };
         assert!(cache.update(&mut delete).is_none());
         assert!(!cache.messages.contains_key(&delete.channel.id()));
 
@@ -1207,12 +1202,8 @@ mod test {
         assert!(cache.update(&mut guild_create).is_none());
         assert!(cache.update(&mut event).is_none());
 
-        let mut guild_delete = GuildDeleteEvent {
-            guild: UnavailableGuild {
-                id: GuildId(1),
-                unavailable: false,
-            },
-        };
+        let mut guild_delete =
+            GuildDeleteEvent { guild: UnavailableGuild { id: GuildId(1), unavailable: false } };
 
         // The guild existed in the cache, so the cache's guild is returned by the
         // update.

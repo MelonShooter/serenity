@@ -19,13 +19,8 @@ use crate::client::dispatch::{dispatch, DispatchEvent};
 use crate::client::{EventHandler, RawEventHandler};
 #[cfg(feature = "collector")]
 use crate::collector::{
-    ComponentInteractionFilter,
-    EventFilter,
-    LazyArc,
-    LazyReactionAction,
-    MessageFilter,
-    ModalInteractionFilter,
-    ReactionFilter,
+    ComponentInteractionFilter, EventFilter, LazyArc, LazyReactionAction, MessageFilter,
+    ModalInteractionFilter, ReactionFilter,
 };
 #[cfg(feature = "framework")]
 use crate::framework::Framework;
@@ -311,10 +306,7 @@ impl ShardRunner {
         let _ = self
             .shard
             .client
-            .close(Some(CloseFrame {
-                code: close_code.into(),
-                reason: Cow::from(""),
-            }))
+            .close(Some(CloseFrame { code: close_code.into(), reason: Cow::from("") }))
             .await;
 
         // In return, we wait for either a Close Frame response, or an error, after which this WS is deemed
@@ -384,9 +376,7 @@ impl ShardRunner {
 
                     true
                 },
-                ShardClientMessage::Manager(ShardManagerMessage::ShardUpdate {
-                    ..
-                })
+                ShardClientMessage::Manager(ShardManagerMessage::ShardUpdate { .. })
                 | ShardClientMessage::Manager(ShardManagerMessage::ShutdownInitiated)
                 | ShardClientMessage::Manager(ShardManagerMessage::ShutdownFinished(_)) => {
                     // nb: not sent here
@@ -411,10 +401,7 @@ impl ShardRunner {
                 },
                 ShardClientMessage::Runner(ShardRunnerMessage::Close(code, reason)) => {
                     let reason = reason.unwrap_or_default();
-                    let close = CloseFrame {
-                        code: code.into(),
-                        reason: Cow::from(reason),
-                    };
+                    let close = CloseFrame { code: code.into(), reason: Cow::from(reason) };
                     self.shard.client.close(Some(close)).await.is_ok()
                 },
                 ShardClientMessage::Runner(ShardRunnerMessage::Message(msg)) => {

@@ -1,3 +1,5 @@
+use std::io::BufReader;
+
 use async_trait::async_trait;
 use async_tungstenite::tungstenite::Message;
 use flate2::read::ZlibDecoder;
@@ -57,19 +59,27 @@ impl SenderExt for WsStream {
 
 #[inline]
 pub(crate) fn convert_ws_message(message: Option<Message>) -> Result<Option<Value>> {
+    const MAX_BUF_SIZE: usize = 1 << 20; // 1 MiB
+
     Ok(match message {
-        Some(Message::Binary(bytes)) => {
-            from_reader(ZlibDecoder::new(&bytes[..])).map(Some).map_err(|why| {
-                warn!("Err deserializing bytes: {:?}; bytes: {:?}", why, bytes);
+        Some(Message::Binary(bytes)) => from_reader(BufReader::with_capacity(
+            MAX_BUF_SIZE.min(bytes.len()),
+            ZlibDecoder::new(&bytes[..]),
+        ))
+        .map(Some)
+        .map_err(|why| {
+            warn!("Err deserializing bytes: {:?}; bytes: {:?}", why, bytes);
+
+            why
+        })?,
+        Some(Message::Text(mut payload)) => {
+            // println!("Text: {payload}");
+            from_str(&mut payload).map(Some).map_err(|why| {
+                warn!("Err deserializing text: {:?}; text: {}", why, payload,);
 
                 why
             })?
         },
-        Some(Message::Text(mut payload)) => from_str(&mut payload).map(Some).map_err(|why| {
-            warn!("Err deserializing text: {:?}; text: {}", why, payload,);
-
-            why
-        })?,
         Some(Message::Close(Some(frame))) => {
             return Err(Error::Gateway(GatewayError::Closed(Some(frame))));
         },
